@@ -1,0 +1,631 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ story.title }} - Co-Writer Theater{% endblock %}
+
+{% block extra_head %}
+<style>
+    .writer-layout {
+        display: grid;
+        grid-template-columns: 290px 1fr;
+        gap: 1.75rem;
+        align-items: start;
+    }
+
+    @media (max-width: 960px) {
+        .writer-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* History Sidebar */
+    .history-card {
+        position: sticky;
+        top: 86px;
+        max-height: calc(100vh - 110px);
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .history-timeline {
+        position: relative;
+        padding-left: 1.25rem;
+        margin-top: 1rem;
+    }
+
+    .history-timeline::before {
+        content: '';
+        position: absolute;
+        left: 4px;
+        top: 6px;
+        bottom: 12px;
+        width: 2px;
+        background: var(--surface2);
+    }
+
+    .timeline-node {
+        position: relative;
+        padding-bottom: 1.25rem;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+
+    .timeline-node:last-child {
+        padding-bottom: 0;
+    }
+
+    .timeline-dot {
+        position: absolute;
+        left: -1.25rem;
+        top: 4px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--text-dim);
+        border: 2px solid var(--surface);
+        transition: var(--transition);
+    }
+
+    .timeline-node.active .timeline-dot {
+        background: var(--accent);
+        box-shadow: 0 0 10px var(--accent);
+    }
+
+    .timeline-node:hover .timeline-dot {
+        transform: scale(1.3);
+        background: #fff;
+    }
+
+    .timeline-title {
+        font-size: 0.86rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        line-height: 1.3;
+        transition: var(--transition);
+    }
+
+    .timeline-node.active .timeline-title {
+        color: #fff;
+        font-weight: 700;
+    }
+
+    .timeline-choice {
+        font-size: 0.76rem;
+        color: var(--text-dim);
+        margin-top: 0.2rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    /* Scene Theater */
+    .scene-prose {
+        font-family: 'Georgia', Cambria, 'Times New Roman', serif;
+        font-size: 1.14rem;
+        line-height: 1.85;
+        color: #f1f1f5;
+        letter-spacing: 0.2px;
+        white-space: pre-line;
+    }
+
+    .scene-prose p {
+        margin-bottom: 1.25rem;
+    }
+
+    .scene-prose p:last-child {
+        margin-bottom: 0;
+    }
+
+    /* Choice Buttons */
+    .choices-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.85rem;
+        margin-top: 1.25rem;
+    }
+
+    .btn-choice {
+        background: var(--surface2);
+        color: var(--text);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1.1rem 1.4rem;
+        text-align: left;
+        border-radius: var(--radius-md);
+        font-size: 0.96rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        transition: var(--transition);
+        cursor: pointer;
+        width: 100%;
+    }
+
+    .btn-choice:hover:not(:disabled) {
+        background: var(--surface-hover);
+        border-color: var(--accent);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+        color: #fff;
+    }
+
+    .btn-choice .choice-arrow {
+        color: var(--accent);
+        font-weight: 700;
+        font-size: 1.2rem;
+        transition: var(--transition);
+    }
+
+    .btn-choice:hover:not(:disabled) .choice-arrow {
+        transform: translateX(4px);
+    }
+
+    /* Loading Overlay */
+    .theater-loading {
+        position: absolute;
+        inset: 0;
+        background: rgba(26, 26, 46, 0.85);
+        backdrop-filter: blur(4px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-lg);
+        z-index: 50;
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .pulsing-orb {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: radial-gradient(circle, var(--accent) 0%, rgba(233, 69, 96, 0) 70%);
+        box-shadow: 0 0 25px var(--accent);
+        animation: pulse 1.6s ease-in-out infinite;
+        margin-bottom: 1.25rem;
+    }
+
+    @keyframes pulse {
+        0%, 100% { transform: scale(0.9); opacity: 0.7; }
+        50% { transform: scale(1.15); opacity: 1; box-shadow: 0 0 40px var(--accent); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Top Header & Actions -->
+<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.75rem;">
+    <div>
+        <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.35rem;">
+            <span class="badge badge-accent">Interactive Storyteller</span>
+            <span id="breadcrumb-scene-counter" class="badge" style="background: rgba(255, 255, 255, 0.08); color: var(--text-muted);">Scene 1</span>
+        </div>
+        <h1 style="font-size: 1.85rem; font-weight: 800; letter-spacing: -0.4px;">
+            {{ story.title }}
+        </h1>
+    </div>
+
+    <div style="display: flex; gap: 0.75rem; align-items: center;">
+        <a href="{% url 'tree-view' story.id %}" class="btn btn-secondary" style="border-color: rgba(233, 69, 96, 0.4);">
+            🌿 View Story Tree
+        </a>
+        <a href="{% url 'story-setup' %}" class="btn btn-outline btn-sm" title="Return to Story Bible setup">
+            ⚙️ Bible Setup
+        </a>
+    </div>
+</div>
+
+<!-- Main Writer Layout -->
+<div class="writer-layout">
+    <!-- Left Column: Scene History Sidebar -->
+    <aside class="card history-card" style="padding: 1.25rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 0.75rem;">
+            <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text);">
+                Chronicle Path
+            </h3>
+            <span id="history-total-badge" class="badge badge-accent" style="font-size: 0.7rem;">0 Scenes</span>
+        </div>
+
+        <div id="history-timeline" class="history-timeline">
+            <!-- Timeline items will be injected here -->
+            <p id="history-empty" style="color: var(--text-dim); font-size: 0.82rem; font-style: italic; padding: 0.5rem 0;">
+                Narrative hasn't commenced yet. Generate the opening scene to build your chronicle.
+            </p>
+        </div>
+    </aside>
+
+    <!-- Right Column: Scene Theater Area -->
+    <main>
+        <!-- Consistency Warning Box (Amber / Yellow) -->
+        <div id="consistency-alert" class="alert alert-warning" style="display: none; margin-bottom: 1.5rem;">
+            <span style="font-size: 1.4rem; line-height: 1;">⚠️</span>
+            <div style="flex: 1;">
+                <strong style="display: block; font-size: 0.95rem; margin-bottom: 0.35rem; color: #fff;">
+                    Story Bible Consistency Warning
+                </strong>
+                <ul id="consistency-issues-list" style="margin-left: 1.25rem; font-size: 0.88rem; line-height: 1.5;">
+                    <!-- Issue items injected dynamically -->
+                </ul>
+                <div style="margin-top: 0.5rem; font-size: 0.78rem; opacity: 0.85;">
+                    * The AI flagged discrepancies between this scene's narrative and established character psychology or lore canon.
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Scene Display Card -->
+        <section class="card" id="scene-card" style="min-height: 380px;">
+            <!-- Loading Indicator Overlay -->
+            <div id="theater-loading" class="theater-loading" style="display: none;">
+                <div class="pulsing-orb"></div>
+                <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.4rem; color: #fff;">
+                    Consulting Story Bible & Weaving Narrative...
+                </h3>
+                <p id="loading-status-text" style="color: var(--text-muted); font-size: 0.88rem; max-width: 440px;">
+                    Verifying character voice rules, checking canon lore, and generating branch continuations...
+                </p>
+            </div>
+
+            <!-- Scene Header Meta -->
+            <div class="card-header" id="scene-meta-header" style="margin-bottom: 1.5rem;">
+                <div>
+                    <span id="scene-badge" class="badge badge-accent" style="margin-bottom: 0.35rem;">Scene #</span>
+                    <h2 id="scene-heading" style="font-size: 1.35rem; font-weight: 700; color: #fff;">
+                        Story Theater
+                    </h2>
+                </div>
+                <div id="scene-timestamp" style="font-size: 0.8rem; color: var(--text-dim);"></div>
+            </div>
+
+            <!-- Scene Content Area -->
+            <div id="scene-display-area">
+                <!-- Initial State (Before any scenes exist) -->
+                <div id="initial-state-prompt" style="text-align: center; padding: 3rem 1.5rem;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">✨</div>
+                    <h3 style="font-size: 1.45rem; font-weight: 700; margin-bottom: 0.65rem;">
+                        The Canvas is Blank
+                    </h3>
+                    <p style="color: var(--text-muted); max-width: 520px; margin: 0 auto 2rem; font-size: 0.95rem; line-height: 1.6;">
+                        Your world rules and characters are configured in the Story Bible. Click below to summon the opening scene and trigger your first narrative branch.
+                    </p>
+                    <button id="btn-generate-first" class="btn btn-primary btn-lg" style="box-shadow: 0 6px 24px rgba(233, 69, 96, 0.45); padding: 0.95rem 2.2rem;">
+                        ⚡ Generate Opening Scene
+                    </button>
+                </div>
+
+                <!-- Active Scene Prose (Rendered when scenes exist) -->
+                <div id="active-scene-body" style="display: none;">
+                    <div id="scene-prose-text" class="scene-prose"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Branch Choices Container -->
+        <section id="choices-card" class="card" style="display: none; margin-top: 1.5rem;">
+            <div class="card-header" style="margin-bottom: 0.75rem;">
+                <h3 class="card-title" style="font-size: 1.1rem;">
+                    <span>🧭</span> Choose Next Narrative Direction
+                </h3>
+                <span class="badge" style="background: rgba(255, 255, 255, 0.06); color: var(--text-muted);">
+                    Select Branch
+                </span>
+            </div>
+            <p style="font-size: 0.88rem; color: var(--text-muted);">
+                Select how your protagonist responds, or take the story in an unexpected path:
+            </p>
+
+            <div id="choices-container" class="choices-grid">
+                <!-- Dynamic choice buttons inserted here -->
+            </div>
+
+            <!-- Optional Custom Choice Prompt -->
+            <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border);">
+                <label for="custom-choice-input" class="form-label" style="font-size: 0.85rem; color: var(--text-muted);">
+                    Or author a custom action / branch:
+                </label>
+                <div style="display: flex; gap: 0.75rem; margin-top: 0.4rem;">
+                    <input type="text" id="custom-choice-input" class="form-control" placeholder="e.g. Kieran reveals the ancient silver dagger hidden in his boot...">
+                    <button id="btn-custom-choice" class="btn btn-secondary" style="white-space: nowrap;">
+                        Branch Custom Path →
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Story context from Django
+    const STORY_ID = {{ story.id }};
+    const STORY_TITLE = "{{ story.title|escapejs }}";
+
+    // Client State
+    let currentScene = null;
+    let sceneHistory = []; // Array of scene objects in sequential path
+    let isGenerating = false;
+
+    // DOM Elements
+    const initialStatePrompt = document.getElementById('initial-state-prompt');
+    const activeSceneBody = document.getElementById('active-scene-body');
+    const sceneProseText = document.getElementById('scene-prose-text');
+    const sceneHeading = document.getElementById('scene-heading');
+    const sceneBadge = document.getElementById('scene-badge');
+    const choicesCard = document.getElementById('choices-card');
+    const choicesContainer = document.getElementById('choices-container');
+    const consistencyAlert = document.getElementById('consistency-alert');
+    const consistencyIssuesList = document.getElementById('consistency-issues-list');
+    const theaterLoading = document.getElementById('theater-loading');
+    const btnGenerateFirst = document.getElementById('btn-generate-first');
+    const historyTimeline = document.getElementById('history-timeline');
+    const historyTotalBadge = document.getElementById('history-total-badge');
+    const breadcrumbSceneCounter = document.getElementById('breadcrumb-scene-counter');
+    const customChoiceInput = document.getElementById('custom-choice-input');
+    const btnCustomChoice = document.getElementById('btn-custom-choice');
+
+    // On Page Load: Fetch existing story tree to resume if scenes exist
+    document.addEventListener('DOMContentLoaded', async () => {
+        await checkExistingScenes();
+    });
+
+    async function checkExistingScenes() {
+        showLoading(true, 'Inspecting narrative tree...');
+        try {
+            const response = await fetch(`/api/stories/${STORY_ID}/tree/`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.nodes && data.nodes.length > 0) {
+                    // Reconstruct history path from tree nodes
+                    // For visualization, if tree has nodes, pick the last created node
+                    sceneHistory = data.nodes.map(n => ({
+                        id: n.id,
+                        choice_label: n.choice_label || n.label || `Scene ${n.id}`,
+                        content: n.content || n.text || n.scene_text || '(Scene text)',
+                        choices: n.choices || []
+                    }));
+
+                    // Select the latest scene
+                    const latest = sceneHistory[sceneHistory.length - 1];
+                    renderScene(latest, latest.choices || []);
+                    renderHistorySidebar();
+                    showLoading(false);
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('Could not load initial story tree:', e);
+        }
+        showLoading(false);
+        // Show initial blank state
+        initialStatePrompt.style.display = 'block';
+        activeSceneBody.style.display = 'none';
+        choicesCard.style.display = 'none';
+    }
+
+    // Handler: Generate First Scene
+    btnGenerateFirst.addEventListener('click', () => {
+        generateScene(null, 'Beginning of Story');
+    });
+
+    // Handler: Custom Choice Button
+    btnCustomChoice.addEventListener('click', () => {
+        const customText = customChoiceInput.value.trim();
+        if (!customText) return;
+        customChoiceInput.value = '';
+        generateScene(currentScene ? currentScene.id : null, customText);
+    });
+
+    // Core Generation API Call
+    async function generateScene(parentId, choiceLabel) {
+        if (isGenerating) return;
+        isGenerating = true;
+        showLoading(true, `Generating next scene for: "${choiceLabel}"...`);
+
+        // Hide warning box during generation
+        consistencyAlert.style.display = 'none';
+
+        const payload = {
+            story_id: STORY_ID,
+            parent_id: parentId,
+            choice_label: choiceLabel
+        };
+
+        try {
+            const csrfToken = getCookie('csrftoken');
+            const response = await fetch('/api/scenes/generate/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken || ''
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                const errMsg = errData.error || errData.detail || 'Scene generation failed on server.';
+                throw new Error(errMsg);
+            }
+
+            const data = await response.json();
+            // Expected response: { scene: {...}, choices: [...], consistency: { consistent: bool, issues: [...] } }
+            const sceneObj = data.scene || {
+                id: data.id,
+                content: data.content || data.scene_text || data.text,
+                choice_label: choiceLabel
+            };
+
+            const choices = data.choices || [];
+            const consistency = data.consistency;
+
+            // Update state
+            currentScene = {
+                id: sceneObj.id,
+                content: sceneObj.content || sceneObj.text || sceneObj.scene_text,
+                choice_label: sceneObj.choice_label || choiceLabel,
+                choices: choices
+            };
+
+            sceneHistory.push(currentScene);
+
+            // Render updated scene & choices
+            renderScene(currentScene, choices);
+            renderHistorySidebar();
+
+            // Handle Consistency Issues
+            handleConsistency(consistency);
+
+        } catch (error) {
+            alert(`Narrative Generation Failed: ${error.message}`);
+        } finally {
+            showLoading(false);
+            isGenerating = false;
+        }
+    }
+
+    function renderScene(scene, choices) {
+        currentScene = scene;
+        initialStatePrompt.style.display = 'none';
+        activeSceneBody.style.display = 'block';
+
+        const sceneIndex = sceneHistory.findIndex(s => s.id === scene.id);
+        const displayIndex = sceneIndex !== -1 ? sceneIndex + 1 : sceneHistory.length;
+
+        sceneBadge.textContent = `Scene ${displayIndex}`;
+        breadcrumbSceneCounter.textContent = `Scene ${displayIndex} of ${sceneHistory.length}`;
+        sceneHeading.textContent = scene.choice_label || `Scene ${displayIndex}`;
+
+        // Format prose paragraphs
+        const formattedProse = escapeHtml(scene.content || '')
+            .split('\n\n')
+            .filter(p => p.trim().length > 0)
+            .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+            .join('');
+
+        sceneProseText.innerHTML = formattedProse || '<p><em>No narrative content for this node.</em></p>';
+
+        // Render Choice Buttons
+        renderChoices(choices);
+
+        // Scroll smoothly to top of card
+        document.getElementById('scene-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function renderChoices(choices) {
+        choicesContainer.innerHTML = '';
+        
+        if (!choices || choices.length === 0) {
+            choicesCard.style.display = 'block';
+            choicesContainer.innerHTML = `
+                <div style="padding: 1rem; background: rgba(255, 255, 255, 0.02); border-radius: var(--radius-sm); color: var(--text-muted); font-size: 0.9rem;">
+                    <em>No predefined branches remaining for this scene. Write your own custom continuation below or explore the Story Tree.</em>
+                </div>
+            `;
+            return;
+        }
+
+        choicesCard.style.display = 'block';
+
+        choices.forEach((choice, idx) => {
+            const label = typeof choice === 'string' ? choice : (choice.label || choice.choice_label || choice.text || `Option ${idx + 1}`);
+            
+            const btn = document.createElement('button');
+            btn.className = 'btn-choice';
+            btn.innerHTML = `
+                <span style="display: flex; align-items: center; gap: 0.65rem;">
+                    <span style="font-weight: 700; color: var(--accent); font-family: monospace;">${idx + 1}.</span>
+                    <span>${escapeHtml(label)}</span>
+                </span>
+                <span class="choice-arrow">→</span>
+            `;
+
+            btn.addEventListener('click', () => {
+                generateScene(currentScene.id, label);
+            });
+
+            choicesContainer.appendChild(btn);
+        });
+    }
+
+    function handleConsistency(consistency) {
+        if (!consistency) {
+            consistencyAlert.style.display = 'none';
+            return;
+        }
+
+        const isConsistent = consistency.consistent !== false;
+        const issues = consistency.issues || [];
+
+        if (!isConsistent || issues.length > 0) {
+            consistencyIssuesList.innerHTML = '';
+            if (issues.length === 0) {
+                const li = document.createElement('li');
+                li.textContent = 'Potential lore divergence detected in dialogue or action constraints.';
+                consistencyIssuesList.appendChild(li);
+            } else {
+                issues.forEach(issue => {
+                    const li = document.createElement('li');
+                    li.textContent = typeof issue === 'string' ? issue : JSON.stringify(issue);
+                    consistencyIssuesList.appendChild(li);
+                });
+            }
+            consistencyAlert.style.display = 'flex';
+        } else {
+            consistencyAlert.style.display = 'none';
+        }
+    }
+
+    function renderHistorySidebar() {
+        historyTimeline.innerHTML = '';
+        historyTotalBadge.textContent = `${sceneHistory.length} Scene${sceneHistory.length === 1 ? '' : 's'}`;
+
+        if (sceneHistory.length === 0) {
+            historyTimeline.innerHTML = `<p id="history-empty" style="color: var(--text-dim); font-size: 0.82rem; font-style: italic; padding: 0.5rem 0;">No scenes in chronicle yet.</p>`;
+            return;
+        }
+
+        sceneHistory.forEach((item, index) => {
+            const nodeEl = document.createElement('div');
+            const isActive = currentScene && currentScene.id === item.id;
+            nodeEl.className = `timeline-node ${isActive ? 'active' : ''}`;
+
+            nodeEl.innerHTML = `
+                <div class="timeline-dot"></div>
+                <div class="timeline-title">Scene ${index + 1}</div>
+                <div class="timeline-choice">${escapeHtml(item.choice_label || 'Scene')}</div>
+            `;
+
+            nodeEl.addEventListener('click', () => {
+                renderScene(item, item.choices || []);
+                renderHistorySidebar();
+            });
+
+            historyTimeline.appendChild(nodeEl);
+        });
+    }
+
+    function showLoading(show, message = 'Weaving narrative...') {
+        if (show) {
+            theaterLoading.style.display = 'flex';
+            document.getElementById('loading-status-text').textContent = message;
+        } else {
+            theaterLoading.style.display = 'none';
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.toString().replace(/[&<>"']/g, m => map[m]);
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,476 @@
+{% extends 'base.html' %}
+
+{% block title %}Story Setup & World Bible - StoryForge{% endblock %}
+
+{% block content %}
+<div style="max-width: 960px; margin: 0 auto;">
+    <!-- Page Header -->
+    <div style="margin-bottom: 2rem;">
+        <h1 style="font-size: 2.1rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.75rem;">
+            <span>📖</span> AI Story Bible & Setup
+        </h1>
+        <p style="color: var(--text-muted); font-size: 1.05rem;">
+            Establish your world, rules of dialogue, psychological profiles, and lore before embarking on your branching narrative.
+        </p>
+    </div>
+
+    <!-- Active Story Status Bar (Shown once story created) -->
+    <div id="active-story-banner" class="card" style="display: none; background: linear-gradient(135deg, rgba(22, 33, 62, 0.9), rgba(26, 26, 46, 0.9)); border-color: rgba(233, 69, 96, 0.4); margin-bottom: 2rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <span class="badge badge-accent" id="active-story-genre" style="margin-bottom: 0.4rem;">GENRE</span>
+                <h2 id="active-story-title" style="font-size: 1.5rem; font-weight: 700; color: #fff;">Story Title</h2>
+                <p id="active-story-dialect" style="color: var(--text-muted); font-size: 0.88rem; margin-top: 0.35rem;"></p>
+            </div>
+            <div>
+                <a id="btn-start-writing" href="#" class="btn btn-primary btn-lg" style="box-shadow: 0 4px 20px rgba(233, 69, 96, 0.5);">
+                    ✍️ Start Writing Scene 1 →
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 1: Create Story Form -->
+    <section id="section-create-story" class="card">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">
+                    <span>1.</span> Create New Story
+                </h2>
+                <div class="card-subtitle">Define the overarching premise, genre rules, and dialogue constraints.</div>
+            </div>
+            <span id="story-status-badge" class="badge badge-accent">Step 1</span>
+        </div>
+
+        <div id="story-feedback"></div>
+
+        <form id="create-story-form">
+            <div class="form-group">
+                <label class="form-label" for="story-title">Story Title <span style="color: var(--accent);">*</span></label>
+                <input type="text" id="story-title" class="form-control" placeholder="e.g. Chronicles of the Obsidian Veil" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="story-genre">Genre <span style="color: var(--accent);">*</span></label>
+                <select id="story-genre" class="form-select" required>
+                    <option value="" disabled selected>Select a genre...</option>
+                    <option value="Fantasy">Fantasy</option>
+                    <option value="Sci-Fi">Sci-Fi</option>
+                    <option value="Horror">Horror</option>
+                    <option value="Mystery">Mystery</option>
+                    <option value="Romance">Romance</option>
+                    <option value="Adventure">Adventure</option>
+                </select>
+                <small class="form-hint">The AI co-writer tailors tropes, pacing, and vocabulary to this genre.</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="story-dialect">Dialect & Linguistic Rules</label>
+                <textarea id="story-dialect" class="form-textarea" rows="4" placeholder="e.g. Archaic formal English, no contractions, nautical metaphors frequent, characters refer to magic as 'The Resonance'."></textarea>
+                <small class="form-hint">Defines global speech rhythms and taboo terms the AI must respect.</small>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; align-items: center; margin-top: 1.5rem;">
+                <button type="submit" id="btn-create-story" class="btn btn-primary">
+                    <span id="story-btn-text">Initialize Story Bible</span>
+                    <span id="story-btn-spinner" class="spinner" style="display: none;"></span>
+                </button>
+            </div>
+        </form>
+    </section>
+
+    <!-- SECTION 2 & 3: Character & Lore Grid (Hidden until Story Created) -->
+    <div id="bible-sections" style="display: none;">
+        <div class="grid-2">
+            <!-- SECTION 2: Characters -->
+            <section class="card" style="margin-bottom: 0;">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">
+                            <span>🎭</span> Cast & Characters
+                        </h2>
+                        <div class="card-subtitle">Define character motivations, fears, and speech patterns.</div>
+                    </div>
+                    <span class="badge badge-accent" id="character-count-badge">0 Added</span>
+                </div>
+
+                <div id="character-feedback"></div>
+
+                <form id="create-character-form" style="margin-bottom: 1.75rem;">
+                    <div class="form-group">
+                        <label class="form-label" for="char-name">Character Name <span style="color: var(--accent);">*</span></label>
+                        <input type="text" id="char-name" class="form-control" placeholder="e.g. Kieran Vance" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="char-psychology">Psychology & Motivations</label>
+                        <textarea id="char-psychology" class="form-textarea" rows="3" placeholder="e.g. Guilt-ridden ex-inquisitor seeking redemption; inherently distrusts authorities and hides fear behind cynicism."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="char-speech">Speech Style & Idiosyncrasies</label>
+                        <textarea id="char-speech" class="form-textarea" rows="2" placeholder="e.g. Speaks in clipped, hushed sentences. Frequently pauses to inspect surroundings. Never makes eye contact."></textarea>
+                    </div>
+
+                    <button type="submit" id="btn-add-character" class="btn btn-secondary" style="width: 100%;">
+                        <span>+ Add to Bible</span>
+                        <span id="char-btn-spinner" class="spinner" style="display: none;"></span>
+                    </button>
+                </form>
+
+                <!-- Added Characters List -->
+                <div style="border-top: 1px solid var(--border); padding-top: 1.25rem;">
+                    <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem;">
+                        Registered Characters
+                    </h3>
+                    <div id="character-list" style="display: flex; flex-direction: column; gap: 0.85rem;">
+                        <p id="character-empty" style="color: var(--text-dim); font-size: 0.88rem; font-style: italic;">
+                            No characters added yet. Add key actors above to ensure the AI maintains character consistency.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: Lore & World Rules -->
+            <section class="card" style="margin-bottom: 0;">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">
+                            <span>📜</span> Lore & World Rules
+                        </h2>
+                        <div class="card-subtitle">Canon facts, magic system bounds, and historical events.</div>
+                    </div>
+                    <span class="badge badge-accent" id="lore-count-badge">0 Added</span>
+                </div>
+
+                <div id="lore-feedback"></div>
+
+                <form id="create-lore-form" style="margin-bottom: 1.75rem;">
+                    <div class="form-group">
+                        <label class="form-label" for="lore-category">Category <span style="color: var(--accent);">*</span></label>
+                        <input type="text" id="lore-category" class="form-control" placeholder="e.g. Magic System, Politics, Geography, Religion" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="lore-fact">Canon Fact / Rule <span style="color: var(--accent);">*</span></label>
+                        <textarea id="lore-fact" class="form-textarea" rows="5" placeholder="e.g. Silver burns raw magic channels; spellcasters cannot cast while touching silver alloys. The Sun hasn't risen in 80 cycles." required></textarea>
+                    </div>
+
+                    <button type="submit" id="btn-add-lore" class="btn btn-secondary" style="width: 100%;">
+                        <span>+ Add Canon Fact</span>
+                        <span id="lore-btn-spinner" class="spinner" style="display: none;"></span>
+                    </button>
+                </form>
+
+                <!-- Added Lore List -->
+                <div style="border-top: 1px solid var(--border); padding-top: 1.25rem;">
+                    <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem;">
+                        Canon Lore Archive
+                    </h3>
+                    <div id="lore-list" style="display: flex; flex-direction: column; gap: 0.85rem;">
+                        <p id="lore-empty" style="color: var(--text-dim); font-size: 0.88rem; font-style: italic;">
+                            No lore entries registered yet. Define immutable facts to prevent plot holes.
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Floating or Bottom Start Writing Bar -->
+        <div style="margin-top: 2rem; display: flex; justify-content: center;">
+            <a id="btn-bottom-start-writing" href="#" class="btn btn-primary btn-lg" style="min-width: 280px; box-shadow: 0 6px 25px rgba(233, 69, 96, 0.45);">
+                🚀 Launch Co-Writer Mode
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // State management for Story Setup
+    let currentStoryId = null;
+    let charactersList = [];
+    let loreList = [];
+
+    const createStoryForm = document.getElementById('create-story-form');
+    const createCharacterForm = document.getElementById('create-character-form');
+    const createLoreForm = document.getElementById('create-lore-form');
+
+    const bibleSections = document.getElementById('bible-sections');
+    const activeStoryBanner = document.getElementById('active-story-banner');
+    const btnStartWriting = document.getElementById('btn-start-writing');
+    const btnBottomStartWriting = document.getElementById('btn-bottom-start-writing');
+
+    // Section 1: Submit Story Creation
+    createStoryForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const title = document.getElementById('story-title').value.trim();
+        const genre = document.getElementById('story-genre').value;
+        const dialectRules = document.getElementById('story-dialect').value.trim();
+
+        const btn = document.getElementById('btn-create-story');
+        const btnText = document.getElementById('story-btn-text');
+        const spinner = document.getElementById('story-btn-spinner');
+
+        btn.disabled = true;
+        btnText.textContent = 'Saving Story...';
+        spinner.style.display = 'inline-block';
+
+        try {
+            const csrfToken = getCookie('csrftoken');
+            const response = await fetch('/api/stories/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken || ''
+                },
+                body: JSON.stringify({
+                    title: title,
+                    genre: genre,
+                    dialect_rules: dialectRules
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                const errMsg = Object.entries(errData).map(([k, v]) => `${k}: ${v}`).join(' ') || 'Failed to create story.';
+                throw new Error(errMsg);
+            }
+
+            const data = await response.json();
+            currentStoryId = data.id;
+
+            showNotification('story-feedback', '✓ Story Bible successfully initialized! Now populate characters and lore below.', 'success');
+
+            // Update UI with active story
+            document.getElementById('active-story-title').textContent = data.title;
+            document.getElementById('active-story-genre').textContent = data.genre || genre;
+            document.getElementById('active-story-dialect').textContent = data.dialect_rules ? `Rules: ${data.dialect_rules}` : '';
+
+            const writerUrl = `/writer/${currentStoryId}/`;
+            btnStartWriting.href = writerUrl;
+            btnBottomStartWriting.href = writerUrl;
+
+            activeStoryBanner.style.display = 'block';
+            bibleSections.style.display = 'block';
+
+            // Disable or lock story form inputs to indicate saved state
+            document.getElementById('story-title').disabled = true;
+            document.getElementById('story-genre').disabled = true;
+            document.getElementById('story-dialect').disabled = true;
+            btnText.textContent = 'Story Initialized';
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-secondary');
+            document.getElementById('story-status-badge').className = 'badge badge-success';
+            document.getElementById('story-status-badge').textContent = 'Saved';
+
+            // Scroll smoothly to characters & lore
+            bibleSections.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        } catch (error) {
+            showNotification('story-feedback', `Error creating story: ${error.message}`, 'danger');
+            btn.disabled = false;
+            btnText.textContent = 'Initialize Story Bible';
+        } finally {
+            spinner.style.display = 'none';
+        }
+    });
+
+    // Section 2: Submit Character
+    createCharacterForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        if (!currentStoryId) {
+            showNotification('character-feedback', 'Please initialize a story first.', 'warning');
+            return;
+        }
+
+        const nameInput = document.getElementById('char-name');
+        const psychInput = document.getElementById('char-psychology');
+        const speechInput = document.getElementById('char-speech');
+
+        const btn = document.getElementById('btn-add-character');
+        const spinner = document.getElementById('char-btn-spinner');
+
+        btn.disabled = true;
+        spinner.style.display = 'inline-block';
+
+        const payload = {
+            story_id: currentStoryId,
+            story: currentStoryId,
+            name: nameInput.value.trim(),
+            psychology: psychInput.value.trim(),
+            speech_style: speechInput.value.trim()
+        };
+
+        try {
+            const csrfToken = getCookie('csrftoken');
+            const response = await fetch('/api/characters/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken || ''
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                const errMsg = Object.entries(errData).map(([k, v]) => `${k}: ${v}`).join(' ') || 'Failed to save character.';
+                throw new Error(errMsg);
+            }
+
+            const newChar = await response.json();
+            charactersList.push(newChar);
+            renderCharacters();
+
+            // Clear form
+            nameInput.value = '';
+            psychInput.value = '';
+            speechInput.value = '';
+            showNotification('character-feedback', `Added "${newChar.name}" to story bible.`, 'success');
+
+        } catch (error) {
+            showNotification('character-feedback', `Error: ${error.message}`, 'danger');
+        } finally {
+            btn.disabled = false;
+            spinner.style.display = 'none';
+        }
+    });
+
+    function renderCharacters() {
+        const listContainer = document.getElementById('character-list');
+        const countBadge = document.getElementById('character-count-badge');
+        countBadge.textContent = `${charactersList.length} Added`;
+
+        if (charactersList.length === 0) {
+            listContainer.innerHTML = `<p id="character-empty" style="color: var(--text-dim); font-size: 0.88rem; font-style: italic;">No characters added yet.</p>`;
+            return;
+        }
+
+        listContainer.innerHTML = '';
+        charactersList.forEach(char => {
+            const item = document.createElement('div');
+            item.style.padding = '0.85rem 1rem';
+            item.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
+            item.style.borderRadius = 'var(--radius-sm)';
+            item.style.border = '1px solid var(--border)';
+            item.style.display = 'flex';
+            item.style.flexDirection = 'column';
+            item.style.gap = '0.35rem';
+
+            item.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <strong style="color: var(--text); font-size: 0.95rem;">${escapeHtml(char.name)}</strong>
+                    <span class="badge badge-accent" style="font-size: 0.7rem;">Character</span>
+                </div>
+                ${char.psychology ? `<p style="font-size: 0.82rem; color: var(--text-muted);"><strong style="color: var(--text-dim);">Psychology:</strong> ${escapeHtml(char.psychology)}</p>` : ''}
+                ${char.speech_style ? `<p style="font-size: 0.82rem; color: var(--text-muted);"><strong style="color: var(--text-dim);">Voice:</strong> ${escapeHtml(char.speech_style)}</p>` : ''}
+            `;
+            listContainer.appendChild(item);
+        });
+    }
+
+    // Section 3: Submit Lore Entry
+    createLoreForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        if (!currentStoryId) {
+            showNotification('lore-feedback', 'Please initialize a story first.', 'warning');
+            return;
+        }
+
+        const catInput = document.getElementById('lore-category');
+        const factInput = document.getElementById('lore-fact');
+
+        const btn = document.getElementById('btn-add-lore');
+        const spinner = document.getElementById('lore-btn-spinner');
+
+        btn.disabled = true;
+        spinner.style.display = 'inline-block';
+
+        const payload = {
+            story_id: currentStoryId,
+            story: currentStoryId,
+            category: catInput.value.trim(),
+            fact: factInput.value.trim()
+        };
+
+        try {
+            const csrfToken = getCookie('csrftoken');
+            const response = await fetch('/api/lore-entries/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken || ''
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                const errMsg = Object.entries(errData).map(([k, v]) => `${k}: ${v}`).join(' ') || 'Failed to save lore entry.';
+                throw new Error(errMsg);
+            }
+
+            const newLore = await response.json();
+            loreList.push(newLore);
+            renderLore();
+
+            // Clear form
+            catInput.value = '';
+            factInput.value = '';
+            showNotification('lore-feedback', `Added "${newLore.category}" lore fact.`, 'success');
+
+        } catch (error) {
+            showNotification('lore-feedback', `Error: ${error.message}`, 'danger');
+        } finally {
+            btn.disabled = false;
+            spinner.style.display = 'none';
+        }
+    });
+
+    function renderLore() {
+        const listContainer = document.getElementById('lore-list');
+        const countBadge = document.getElementById('lore-count-badge');
+        countBadge.textContent = `${loreList.length} Added`;
+
+        if (loreList.length === 0) {
+            listContainer.innerHTML = `<p id="lore-empty" style="color: var(--text-dim); font-size: 0.88rem; font-style: italic;">No lore entries registered yet.</p>`;
+            return;
+        }
+
+        listContainer.innerHTML = '';
+        loreList.forEach(entry => {
+            const item = document.createElement('div');
+            item.style.padding = '0.85rem 1rem';
+            item.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
+            item.style.borderRadius = 'var(--radius-sm)';
+            item.style.border = '1px solid var(--border)';
+            item.style.display = 'flex';
+            item.style.flexDirection = 'column';
+            item.style.gap = '0.35rem';
+
+            item.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <span class="badge" style="background: rgba(15, 52, 96, 0.5); color: #9bc5ff; border: 1px solid var(--accent2);">${escapeHtml(entry.category)}</span>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text); line-height: 1.5; margin-top: 0.2rem;">${escapeHtml(entry.fact)}</p>
+            `;
+            listContainer.appendChild(item);
+        });
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.toString().replace(/[&<>"']/g, m => map[m]);
+    }
+</script>
+{% endblock %}

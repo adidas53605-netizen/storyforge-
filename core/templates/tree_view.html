@@ -1,0 +1,462 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ story.title }} - Story Tree - StoryForge{% endblock %}
+
+{% block main_class %}full-width{% endblock %}
+
+{% block extra_head %}
+<!-- vis-network library -->
+<script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<style>
+    .tree-workspace {
+        position: relative;
+        width: 100%;
+        height: calc(100vh - 68px);
+        display: flex;
+        flex-direction: column;
+        background-color: #0b0b14;
+        background-image: 
+            radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+            radial-gradient(rgba(15, 52, 96, 0.15) 1px, transparent 1px);
+        background-size: 32px 32px;
+        background-position: 0 0, 16px 16px;
+        overflow: hidden;
+    }
+
+    .tree-header-bar {
+        position: absolute;
+        top: 1rem;
+        left: 1.5rem;
+        right: 1.5rem;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        pointer-events: none;
+    }
+
+    .tree-header-card {
+        pointer-events: auto;
+        background: rgba(26, 26, 46, 0.9);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-md);
+        padding: 0.65rem 1.25rem;
+        box-shadow: var(--shadow);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .tree-controls-card {
+        pointer-events: auto;
+        background: rgba(26, 26, 46, 0.9);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-md);
+        padding: 0.45rem 0.65rem;
+        box-shadow: var(--shadow);
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    #network-container {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+    }
+
+    .tree-loading-indicator {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 90;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        background: rgba(26, 26, 46, 0.9);
+        padding: 2rem 3rem;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
+    }
+
+    .tree-empty-state {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 90;
+        text-align: center;
+        max-width: 480px;
+        background: rgba(26, 26, 46, 0.95);
+        padding: 2.5rem;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .modal-prose {
+        font-family: 'Georgia', serif;
+        font-size: 1.05rem;
+        line-height: 1.8;
+        color: #f3f3f3;
+        white-space: pre-line;
+        background: rgba(0, 0, 0, 0.25);
+        padding: 1.25rem;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tree-workspace">
+    <!-- Overlay Top Bar -->
+    <div class="tree-header-bar">
+        <div class="tree-header-card">
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="badge badge-accent">Interactive Story Tree</span>
+                    <span id="node-count-badge" class="badge" style="background: rgba(255, 255, 255, 0.08); color: var(--text-muted);">0 Nodes</span>
+                </div>
+                <h1 style="font-size: 1.2rem; font-weight: 700; margin-top: 0.2rem; color: #fff;">
+                    {{ story.title }}
+                </h1>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <!-- Tree Navigation Controls -->
+            <div class="tree-controls-card">
+                <button id="btn-zoom-in" class="btn btn-secondary btn-sm" title="Zoom In" style="padding: 0.35rem 0.65rem;">➕</button>
+                <button id="btn-zoom-out" class="btn btn-secondary btn-sm" title="Zoom Out" style="padding: 0.35rem 0.65rem;">➖</button>
+                <button id="btn-fit-view" class="btn btn-secondary btn-sm" title="Fit Entire Tree" style="padding: 0.35rem 0.75rem;">⤢ Fit</button>
+            </div>
+
+            <!-- Return to Writer -->
+            <a href="{% url 'writer' story.id %}" class="btn btn-primary" style="pointer-events: auto; box-shadow: 0 4px 14px rgba(233, 69, 96, 0.4);">
+                ✍️ Return to Co-Writer
+            </a>
+        </div>
+    </div>
+
+    <!-- Tree Loading Indicator -->
+    <div id="tree-loading" class="tree-loading-indicator">
+        <div class="spinner" style="width: 36px; height: 36px; border-width: 3px; border-top-color: var(--accent);"></div>
+        <p style="color: var(--text); font-weight: 600; font-size: 0.95rem;">Rendering Story Hierarchy...</p>
+    </div>
+
+    <!-- Empty State (Shown if no nodes) -->
+    <div id="tree-empty" class="tree-empty-state" style="display: none;">
+        <div style="font-size: 2.8rem; margin-bottom: 0.75rem;">🌱</div>
+        <h2 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff;">No Branching Tree Yet</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5;">
+            Your story has not branched into any scenes yet. Head to Co-Writer mode to generate your opening scene.
+        </p>
+        <a href="{% url 'writer' story.id %}" class="btn btn-primary">
+            🚀 Launch Co-Writer & Begin
+        </a>
+    </div>
+
+    <!-- Vis Network Graph Container -->
+    <div id="network-container"></div>
+</div>
+
+<!-- Scene Detail Modal -->
+<div id="scene-modal" class="modal-overlay">
+    <div class="modal-container">
+        <div class="modal-header">
+            <div>
+                <span id="modal-scene-badge" class="badge badge-accent" style="margin-bottom: 0.3rem;">Scene Node</span>
+                <h3 id="modal-scene-title" class="modal-title">Scene Details</h3>
+            </div>
+            <button id="modal-close-btn" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.4rem; letter-spacing: 0.5px;">
+                Branch Choice Prompt
+            </label>
+            <div id="modal-choice-label" style="font-weight: 600; color: var(--accent); margin-bottom: 1.25rem; font-size: 1.05rem;"></div>
+
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.4rem; letter-spacing: 0.5px;">
+                Narrative Prose
+            </label>
+            <div id="modal-scene-text" class="modal-prose"></div>
+        </div>
+        <div class="modal-footer">
+            <button id="modal-dismiss-btn" class="btn btn-secondary">Close</button>
+            <a id="modal-writer-link" href="{% url 'writer' story.id %}" class="btn btn-primary">
+                ✍️ Co-Write from Here
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const STORY_ID = {{ story.id }};
+    const STORY_TITLE = "{{ story.title|escapejs }}";
+
+    let networkInstance = null;
+    let nodesDataset = null;
+    let edgesDataset = null;
+    let nodesDataMap = new Map();
+
+    const networkContainer = document.getElementById('network-container');
+    const treeLoading = document.getElementById('tree-loading');
+    const treeEmpty = document.getElementById('tree-empty');
+    const nodeCountBadge = document.getElementById('node-count-badge');
+
+    // Modal Elements
+    const sceneModal = document.getElementById('scene-modal');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+    const modalDismissBtn = document.getElementById('modal-dismiss-btn');
+    const modalSceneBadge = document.getElementById('modal-scene-badge');
+    const modalSceneTitle = document.getElementById('modal-scene-title');
+    const modalChoiceLabel = document.getElementById('modal-choice-label');
+    const modalSceneText = document.getElementById('modal-scene-text');
+
+    // Fetch and construct tree on load
+    document.addEventListener('DOMContentLoaded', () => {
+        loadStoryTree();
+    });
+
+    async function loadStoryTree() {
+        treeLoading.style.display = 'flex';
+        treeEmpty.style.display = 'none';
+
+        try {
+            const response = await fetch(`/api/stories/${STORY_ID}/tree/`);
+            if (!response.ok) {
+                throw new Error(`Failed to load story tree (Status ${response.status})`);
+            }
+
+            const data = await response.json();
+            const nodes = data.nodes || [];
+            const edges = data.edges || [];
+
+            if (nodes.length === 0) {
+                treeLoading.style.display = 'none';
+                treeEmpty.style.display = 'block';
+                nodeCountBadge.textContent = '0 Nodes';
+                return;
+            }
+
+            nodeCountBadge.textContent = `${nodes.length} Scene${nodes.length === 1 ? '' : 's'}`;
+            initVisNetwork(nodes, edges);
+
+        } catch (error) {
+            console.error('Error fetching tree:', error);
+            treeLoading.innerHTML = `
+                <div style="color: var(--accent); font-size: 1.5rem;">⚠️</div>
+                <p style="color: var(--text);">Error loading narrative tree: ${escapeHtml(error.message)}</p>
+                <button onclick="loadStoryTree()" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">Retry</button>
+            `;
+        }
+    }
+
+    function initVisNetwork(rawNodes, rawEdges) {
+        nodesDataMap.clear();
+
+        // Format nodes for vis-network with dark theme specifications
+        const formattedNodes = rawNodes.map((n, index) => {
+            const rawLabel = n.choice_label || n.label || `Scene ${n.id}`;
+            // Truncate label for clean display on the node box
+            const displayLabel = rawLabel.length > 34 ? rawLabel.substring(0, 31) + '...' : rawLabel;
+
+            nodesDataMap.set(n.id, n);
+
+            return {
+                id: n.id,
+                label: `[#${n.id}] ${displayLabel}`,
+                title: `Click to inspect full scene narrative`,
+                shape: 'box',
+                margin: { top: 12, bottom: 12, left: 16, right: 16 },
+                borderWidth: 2,
+                borderWidthSelected: 3,
+                color: {
+                    background: '#1a1a2e',
+                    border: '#e94560',
+                    highlight: {
+                        background: '#16213e',
+                        border: '#ff5470'
+                    },
+                    hover: {
+                        background: '#22254b',
+                        border: '#ff5470'
+                    }
+                },
+                font: {
+                    color: '#eeeeee',
+                    size: 13,
+                    face: 'Inter, -apple-system, sans-serif',
+                    bold: {
+                        color: '#ffffff'
+                    }
+                },
+                shadow: {
+                    enabled: true,
+                    color: 'rgba(0, 0, 0, 0.6)',
+                    size: 8,
+                    x: 0,
+                    y: 3
+                }
+            };
+        });
+
+        // Format edges with dark theme accents
+        const formattedEdges = rawEdges.map(e => {
+            const fromId = e.from !== undefined ? e.from : (e.source !== undefined ? e.source : e.parent_id);
+            const toId = e.to !== undefined ? e.to : (e.target !== undefined ? e.target : e.child_id);
+
+            return {
+                from: fromId,
+                to: toId,
+                color: {
+                    color: '#0f3460',
+                    highlight: '#e94560',
+                    hover: '#ff5470'
+                },
+                arrows: {
+                    to: {
+                        enabled: true,
+                        scaleFactor: 0.85
+                    }
+                },
+                width: 2.5,
+                smooth: {
+                    type: 'cubicBezier',
+                    forceDirection: 'vertical',
+                    roundness: 0.6
+                }
+            };
+        });
+
+        nodesDataset = new vis.DataSet(formattedNodes);
+        edgesDataset = new vis.DataSet(formattedEdges);
+
+        const networkData = {
+            nodes: nodesDataset,
+            edges: edgesDataset
+        };
+
+        const networkOptions = {
+            layout: {
+                hierarchical: {
+                    direction: 'UD', // Top to bottom hierarchy
+                    sortMethod: 'directed',
+                    levelSeparation: 140,
+                    nodeSpacing: 220,
+                    treeSpacing: 260
+                }
+            },
+            physics: {
+                hierarchicalRepulsion: {
+                    nodeDistance: 190,
+                    damping: 0.2
+                }
+            },
+            interaction: {
+                hover: true,
+                tooltipDelay: 150,
+                navigationButtons: false,
+                keyboard: true,
+                zoomView: true,
+                dragView: true
+            }
+        };
+
+        networkInstance = new vis.Network(networkContainer, networkData, networkOptions);
+
+        treeLoading.style.display = 'none';
+
+        // Fit network view once stabilized
+        networkInstance.once('afterDrawing', () => {
+            networkInstance.fit({
+                animation: {
+                    duration: 600,
+                    easingFunction: 'easeInOutQuad'
+                }
+            });
+        });
+
+        // Handle Node Selection / Click to show full scene modal
+        networkInstance.on('click', function(params) {
+            if (params.nodes && params.nodes.length > 0) {
+                const clickedNodeId = params.nodes[0];
+                const nodeData = nodesDataMap.get(clickedNodeId);
+                if (nodeData) {
+                    openSceneModal(nodeData);
+                }
+            }
+        });
+    }
+
+    // Modal Functions
+    function openSceneModal(sceneData) {
+        modalSceneBadge.textContent = `Scene Node #${sceneData.id}`;
+        modalSceneTitle.textContent = sceneData.title || `Scene ${sceneData.id}`;
+        modalChoiceLabel.textContent = sceneData.choice_label || sceneData.label || 'Narrative Inception';
+        
+        const prose = sceneData.content || sceneData.text || sceneData.scene_text || 'No narrative text recorded for this branch node.';
+        modalSceneText.textContent = prose;
+
+        sceneModal.classList.add('active');
+    }
+
+    function closeSceneModal() {
+        sceneModal.classList.remove('active');
+    }
+
+    modalCloseBtn.addEventListener('click', closeSceneModal);
+    modalDismissBtn.addEventListener('click', closeSceneModal);
+    sceneModal.addEventListener('click', (e) => {
+        if (e.target === sceneModal) {
+            closeSceneModal();
+        }
+    });
+
+    // Zoom and Fit Controls
+    document.getElementById('btn-zoom-in').addEventListener('click', () => {
+        if (!networkInstance) return;
+        const scale = networkInstance.getScale();
+        networkInstance.moveTo({ scale: scale * 1.3, animation: { duration: 250 } });
+    });
+
+    document.getElementById('btn-zoom-out').addEventListener('click', () => {
+        if (!networkInstance) return;
+        const scale = networkInstance.getScale();
+        networkInstance.moveTo({ scale: scale / 1.3, animation: { duration: 250 } });
+    });
+
+    document.getElementById('btn-fit-view').addEventListener('click', () => {
+        if (!networkInstance) return;
+        networkInstance.fit({
+            animation: { duration: 500, easingFunction: 'easeInOutQuad' }
+        });
+    });
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.toString().replace(/[&<>"']/g, m => map[m]);
+    }
+</script>
+{% endblock %}
