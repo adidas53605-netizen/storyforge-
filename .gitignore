@@ -30,3 +30,7 @@ chromadb/
 Thumbs.db
 .vscode/
 .idea/
+
+# Static collection
+staticfiles/
+
