@@ -332,8 +332,76 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Finish Story Action -->
+            <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                <div style="font-size: 0.85rem; color: var(--text-muted);">
+                    <span>🏁</span> Narrative reached its culmination? Conclude this story path.
+                </div>
+                <button type="button" id="btn-finish-story" class="btn btn-primary" style="box-shadow: 0 4px 16px rgba(233, 69, 96, 0.4);">
+                    <span>🏁</span> Finish Story / The End
+                </button>
+            </div>
+        </section>
+
+        <!-- The End / Completed Story Card -->
+        <section id="completed-card" class="card" style="display: none; margin-top: 1.5rem; background: linear-gradient(135deg, rgba(22, 33, 62, 0.95), rgba(26, 26, 46, 0.95)); border-color: rgba(233, 69, 96, 0.5); box-shadow: 0 8px 32px rgba(233, 69, 96, 0.2);">
+            <div style="text-align: center; padding: 1.5rem 1rem;">
+                <div style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.35rem 1.15rem; background: rgba(233, 69, 96, 0.18); border: 1px solid rgba(233, 69, 96, 0.5); border-radius: 999px; margin-bottom: 1rem;">
+                    <span style="font-size: 1rem;">✨</span>
+                    <span style="color: #ff5470; font-weight: 700; font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase;">Chronicle Completed</span>
+                </div>
+                <h2 style="font-size: 2.3rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem; letter-spacing: -0.5px;">
+                    The End
+                </h2>
+                <p style="color: var(--text-muted); max-width: 580px; margin: 0 auto 1.75rem; font-size: 0.98rem; line-height: 1.6;">
+                    This story has reached its conclusion. All canon lore and character journeys in this chronicle have reached their resting place. You can read the full continuous story, export it as a text file, or reopen the chronicle to author new branches.
+                </p>
+
+                <!-- Completed Action Buttons -->
+                <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <button type="button" id="btn-read-full-story" class="btn btn-primary btn-lg" style="box-shadow: 0 4px 20px rgba(233, 69, 96, 0.5);">
+                        <span>📖</span> Read Full Story
+                    </button>
+                    <a id="btn-download-story" href="/writer/{{ story.id }}/download/" class="btn btn-secondary btn-lg" style="border-color: rgba(255, 255, 255, 0.2);" download>
+                        <span>💾</span> Download as .txt
+                    </a>
+                    <button type="button" id="btn-reopen-story" class="btn btn-outline btn-lg" style="border-color: var(--border-light);">
+                        <span>🔄</span> Reopen Story
+                    </button>
+                </div>
+            </div>
         </section>
     </main>
+</div>
+
+<!-- Full Story Reader Modal -->
+<div id="full-story-modal" style="display: none; position: fixed; inset: 0; background: rgba(10, 10, 20, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div style="background: var(--surface); border: 1px solid var(--border-light); border-radius: var(--radius-lg); width: 100%; max-width: 860px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: var(--shadow-lg);">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.75rem; border-bottom: 1px solid var(--border);">
+            <div>
+                <span class="badge badge-accent" style="margin-bottom: 0.25rem;">Full Chronicle Manuscript</span>
+                <h3 style="font-size: 1.25rem; font-weight: 700; color: #fff;">{{ story.title }}</h3>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <a href="/writer/{{ story.id }}/download/" class="btn btn-secondary btn-sm" download>
+                    <span>💾</span> Download .txt
+                </a>
+                <button type="button" id="btn-close-modal" class="btn btn-outline btn-sm" style="font-size: 1.1rem; line-height: 1; padding: 0.4rem 0.75rem;">
+                    ✕
+                </button>
+            </div>
+        </div>
+        <div id="full-story-content" style="padding: 1.75rem; overflow-y: auto; flex: 1; font-family: 'Georgia', Cambria, serif; font-size: 1.1rem; line-height: 1.85; color: #f1f1f5;">
+            <!-- Rendered continuous story injected here -->
+        </div>
+        <div style="padding: 1rem 1.75rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+            <span id="full-story-stats" style="font-size: 0.85rem; color: var(--text-dim);">0 scenes</span>
+            <button type="button" id="btn-close-modal-bottom" class="btn btn-secondary">
+                Close Reader
+            </button>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -344,6 +412,7 @@
     const STORY_TITLE = "{{ story.title|escapejs }}";
 
     // Client State
+    let isStoryCompleted = {{ story.is_completed|yesno:"true,false" }};
     let currentScene = null;
     let sceneHistory = []; // Array of scene objects in sequential path
     let isGenerating = false;
@@ -365,6 +434,14 @@
     const breadcrumbSceneCounter = document.getElementById('breadcrumb-scene-counter');
     const customChoiceInput = document.getElementById('custom-choice-input');
     const btnCustomChoice = document.getElementById('btn-custom-choice');
+    const btnFinishStory = document.getElementById('btn-finish-story');
+    const completedCard = document.getElementById('completed-card');
+    const btnReadFullStory = document.getElementById('btn-read-full-story');
+    const btnReopenStory = document.getElementById('btn-reopen-story');
+    const fullStoryModal = document.getElementById('full-story-modal');
+    const fullStoryContent = document.getElementById('full-story-content');
+    const btnCloseModal = document.getElementById('btn-close-modal');
+    const btnCloseModalBottom = document.getElementById('btn-close-modal-bottom');
 
     // On Page Load: Fetch existing story tree to resume if scenes exist
     document.addEventListener('DOMContentLoaded', async () => {
@@ -377,9 +454,11 @@
             const response = await fetch(`/api/stories/${STORY_ID}/tree/`);
             if (response.ok) {
                 const data = await response.json();
+                if (typeof data.is_completed !== 'undefined') {
+                    isStoryCompleted = Boolean(data.is_completed);
+                }
                 if (data.nodes && data.nodes.length > 0) {
                     // Reconstruct history path from tree nodes
-                    // For visualization, if tree has nodes, pick the last created node
                     sceneHistory = data.nodes.map(n => ({
                         id: n.id,
                         choice_label: n.choice_label || n.label || `Scene ${n.id}`,
@@ -391,6 +470,9 @@
                     const latest = sceneHistory[sceneHistory.length - 1];
                     renderScene(latest, latest.choices || []);
                     renderHistorySidebar();
+                    if (isStoryCompleted) {
+                        renderCompletedState();
+                    }
                     showLoading(false);
                     return;
                 }
@@ -399,27 +481,196 @@
             console.warn('Could not load initial story tree:', e);
         }
         showLoading(false);
-        // Show initial blank state
-        initialStatePrompt.style.display = 'block';
-        activeSceneBody.style.display = 'none';
-        choicesCard.style.display = 'none';
+        // Show initial blank state or completed state
+        if (isStoryCompleted) {
+            renderCompletedState();
+        } else {
+            initialStatePrompt.style.display = 'block';
+            activeSceneBody.style.display = 'none';
+            choicesCard.style.display = 'none';
+        }
     }
 
     // Handler: Generate First Scene
     btnGenerateFirst.addEventListener('click', () => {
+        if (isStoryCompleted) {
+            alert("This story is completed. Reopen the story to generate new scenes.");
+            return;
+        }
         generateScene(null, 'Beginning of Story');
     });
 
     // Handler: Custom Choice Button
     btnCustomChoice.addEventListener('click', () => {
+        if (isStoryCompleted) {
+            alert("This story is completed. Reopen the story to generate new scenes.");
+            return;
+        }
         const customText = customChoiceInput.value.trim();
         if (!customText) return;
         customChoiceInput.value = '';
         generateScene(currentScene ? currentScene.id : null, customText);
     });
 
+    // Handler: Finish Story Button
+    btnFinishStory.addEventListener('click', async () => {
+        const confirmed = confirm("Are you sure you want to end this story? You won't be able to add more scenes.");
+        if (!confirmed) return;
+
+        showLoading(true, "Concluding narrative and weaving closing epilogue...");
+        try {
+            const csrfToken = getCookie('csrftoken');
+            const response = await fetch(`/writer/${STORY_ID}/complete/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken || ''
+                },
+                body: JSON.stringify({
+                    parent_id: currentScene ? currentScene.id : null,
+                    generate_epilogue: true
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || errData.detail || 'Failed to complete story.');
+            }
+
+            const data = await response.json();
+            isStoryCompleted = true;
+
+            if (data.epilogue_scene) {
+                const epilogue = {
+                    id: data.epilogue_scene.id,
+                    choice_label: data.epilogue_scene.choice_label || 'The End (Epilogue)',
+                    content: data.epilogue_scene.text,
+                    choices: []
+                };
+                sceneHistory.push(epilogue);
+                currentScene = epilogue;
+            }
+
+            renderScene(currentScene, []);
+            renderHistorySidebar();
+            renderCompletedState();
+        } catch (err) {
+            alert(`Could not finish story: ${err.message}`);
+        } finally {
+            showLoading(false);
+        }
+    });
+
+    // Handler: Reopen Story Button
+    btnReopenStory.addEventListener('click', async () => {
+        showLoading(true, 'Reopening chronicle for new branches...');
+        try {
+            const csrfToken = getCookie('csrftoken');
+            const response = await fetch(`/writer/${STORY_ID}/reopen/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken || ''
+                }
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || errData.detail || 'Failed to reopen story.');
+            }
+
+            isStoryCompleted = false;
+            renderCompletedState();
+            if (currentScene) {
+                renderScene(currentScene, currentScene.choices || []);
+            }
+            renderHistorySidebar();
+        } catch (err) {
+            alert(`Could not reopen story: ${err.message}`);
+        } finally {
+            showLoading(false);
+        }
+    });
+
+    // Modal Handlers: Full Story Reader
+    btnReadFullStory.addEventListener('click', openFullStoryModal);
+    btnCloseModal.addEventListener('click', closeFullStoryModal);
+    btnCloseModalBottom.addEventListener('click', closeFullStoryModal);
+    fullStoryModal.addEventListener('click', (e) => {
+        if (e.target === fullStoryModal) closeFullStoryModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && fullStoryModal.style.display === 'flex') {
+            closeFullStoryModal();
+        }
+    });
+
+    function openFullStoryModal() {
+        if (sceneHistory.length === 0) {
+            fullStoryContent.innerHTML = '<p><em>No scenes recorded yet in this chronicle.</em></p>';
+        } else {
+            let html = '';
+            sceneHistory.forEach((scene, idx) => {
+                const title = escapeHtml(scene.choice_label || `Scene ${idx + 1}`);
+                const text = escapeHtml(scene.content || '')
+                    .split('\n\n')
+                    .filter(p => p.trim().length > 0)
+                    .map(p => `<p style="margin-bottom: 1.15rem;">${p.replace(/\n/g, '<br>')}</p>`)
+                    .join('');
+
+                html += `
+                    <div style="margin-bottom: 2.5rem;">
+                        <div style="font-family: 'Inter', sans-serif; font-size: 0.85rem; font-weight: 700; color: var(--accent); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 0.45rem;">
+                            Scene ${idx + 1} &bull; ${title}
+                        </div>
+                        <div>${text}</div>
+                        ${idx < sceneHistory.length - 1 ? '<div style="margin: 2rem auto; width: 60px; height: 1px; background: var(--border-light);"></div>' : ''}
+                    </div>
+                `;
+            });
+
+            if (isStoryCompleted) {
+                html += `
+                    <div style="text-align: center; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+                        <div style="font-size: 1.4rem; font-weight: 800; letter-spacing: 2px; color: #fff;">THE END</div>
+                    </div>
+                `;
+            }
+
+            fullStoryContent.innerHTML = html;
+        }
+
+        document.getElementById('full-story-stats').textContent = `${sceneHistory.length} Scene${sceneHistory.length === 1 ? '' : 's'} in Chronicle`;
+        fullStoryModal.style.display = 'flex';
+    }
+
+    function closeFullStoryModal() {
+        fullStoryModal.style.display = 'none';
+    }
+
+    function renderCompletedState() {
+        if (isStoryCompleted) {
+            choicesCard.style.display = 'none';
+            completedCard.style.display = 'block';
+            historyTotalBadge.textContent = 'COMPLETED';
+            historyTotalBadge.className = 'badge badge-accent';
+            breadcrumbSceneCounter.textContent = 'COMPLETED';
+        } else {
+            completedCard.style.display = 'none';
+            if (currentScene) {
+                choicesCard.style.display = 'block';
+            }
+            historyTotalBadge.className = 'badge badge-accent';
+            historyTotalBadge.textContent = `${sceneHistory.length} Scene${sceneHistory.length === 1 ? '' : 's'}`;
+        }
+    }
+
     // Core Generation API Call
     async function generateScene(parentId, choiceLabel) {
+        if (isStoryCompleted) {
+            alert("This story is completed. Reopen the story to generate new scenes.");
+            return;
+        }
         if (isGenerating) return;
         isGenerating = true;
         showLoading(true, `Generating next scene for: "${choiceLabel}"...`);
@@ -495,7 +746,7 @@
         const displayIndex = sceneIndex !== -1 ? sceneIndex + 1 : sceneHistory.length;
 
         sceneBadge.textContent = `Scene ${displayIndex}`;
-        breadcrumbSceneCounter.textContent = `Scene ${displayIndex} of ${sceneHistory.length}`;
+        breadcrumbSceneCounter.textContent = isStoryCompleted ? 'COMPLETED' : `Scene ${displayIndex} of ${sceneHistory.length}`;
         sceneHeading.textContent = scene.choice_label || `Scene ${displayIndex}`;
 
         // Format prose paragraphs
@@ -507,21 +758,30 @@
 
         sceneProseText.innerHTML = formattedProse || '<p><em>No narrative content for this node.</em></p>';
 
-        // Render Choice Buttons
-        renderChoices(choices);
+        // Render Choice Buttons or Completed State
+        if (isStoryCompleted) {
+            renderCompletedState();
+        } else {
+            renderChoices(choices);
+        }
 
         // Scroll smoothly to top of card
         document.getElementById('scene-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function renderChoices(choices) {
+        if (isStoryCompleted) {
+            choicesCard.style.display = 'none';
+            return;
+        }
+
         choicesContainer.innerHTML = '';
         
         if (!choices || choices.length === 0) {
             choicesCard.style.display = 'block';
             choicesContainer.innerHTML = `
                 <div style="padding: 1rem; background: rgba(255, 255, 255, 0.02); border-radius: var(--radius-sm); color: var(--text-muted); font-size: 0.9rem;">
-                    <em>No predefined branches remaining for this scene. Write your own custom continuation below or explore the Story Tree.</em>
+                    <em>No predefined branches remaining for this scene. Write your own custom continuation below or conclude the chronicle.</em>
                 </div>
             `;
             return;
@@ -580,7 +840,13 @@
 
     function renderHistorySidebar() {
         historyTimeline.innerHTML = '';
-        historyTotalBadge.textContent = `${sceneHistory.length} Scene${sceneHistory.length === 1 ? '' : 's'}`;
+        if (isStoryCompleted) {
+            historyTotalBadge.textContent = 'COMPLETED';
+            historyTotalBadge.className = 'badge badge-accent';
+        } else {
+            historyTotalBadge.textContent = `${sceneHistory.length} Scene${sceneHistory.length === 1 ? '' : 's'}`;
+            historyTotalBadge.className = 'badge badge-accent';
+        }
 
         if (sceneHistory.length === 0) {
             historyTimeline.innerHTML = `<p id="history-empty" style="color: var(--text-dim); font-size: 0.82rem; font-style: italic; padding: 0.5rem 0;">No scenes in chronicle yet.</p>`;

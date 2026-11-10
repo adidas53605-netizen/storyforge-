@@ -182,6 +182,47 @@ Respond ONLY with valid JSON in this exact format:
     return _execute_gemini_call(contents=prompt, response_schema=SceneOutput)
 
 
+def generate_epilogue(story, parent_scene=None):
+    """Generate a short 2-3 sentence closing epilogue scene that wraps up the story using the story bible."""
+    context_query = f"{story.title} conclusion epilogue finale ending"
+    relevant_docs = retrieve_relevant(story.id, context_query, k=5)
+
+    characters = story.characters.all()
+    char_descriptions = []
+    for c in characters:
+        char_descriptions.append(
+            f"- {c.name}: Psychology: {c.psychology}. Speech style: {c.speech_style}."
+        )
+
+    parent_text = ""
+    if parent_scene:
+        parent_text = f"\n\nPrevious scene:\n{parent_scene.text}"
+
+    prompt = f"""You are a master creative fiction writer concluding an epic story.
+Write a short closing epilogue scene (2-3 sentences) that gracefully wraps up the story using the established story bible.
+
+Story: {story.title}
+Genre: {story.genre}
+Dialect rules: {story.dialect_rules or 'None specified'}
+
+Characters:
+{chr(10).join(char_descriptions) if char_descriptions else 'No characters defined yet.'}
+
+Relevant lore and context:
+{chr(10).join(f'- {doc}' for doc in relevant_docs) if relevant_docs else 'No lore entries yet.'}
+{parent_text}
+
+Task: Write a satisfying, poetic 2-3 sentence concluding epilogue. Do NOT provide choices; this is the definitive end of the narrative.
+
+Respond ONLY with valid JSON in this exact format:
+{{
+  "text": "The 2-3 sentence closing epilogue here...",
+  "choices": []
+}}"""
+
+    return _execute_gemini_call(contents=prompt, response_schema=SceneOutput)
+
+
 def check_consistency(story, new_scene_text):
     """Check new scene text for consistency issues against story lore and characters."""
     relevant_docs = retrieve_relevant(story.id, new_scene_text, k=5)

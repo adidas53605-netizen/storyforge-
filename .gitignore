@@ -34,3 +34,8 @@ Thumbs.db
 # Static collection
 staticfiles/
 
+# Binary / build artifacts
+*.exe
+*.pdb
+*.rs
+

@@ -5,6 +5,7 @@ class Story(models.Model):
     title = models.CharField(max_length=255)
     genre = models.CharField(max_length=100)
     dialect_rules = models.TextField(blank=True, default='')
+    is_completed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
