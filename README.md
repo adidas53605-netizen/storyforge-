@@ -163,37 +163,38 @@ Clone Repository
 git clone https://github.com/adidas53605-netizen/storyforge-.git
 cd storyforge-
 
-Create Virtual Environment
-
+### Create Virtual Environment
+```bash
 python -m venv venv
+```
 
 Activate on Windows:
-
+```bash
 venv\Scripts\activate
+```
 
-Install Dependencies
-
+### Install Dependencies
+```bash
 pip install -r requirements.txt
+```
 
-Environment Configuration
-
-Configure the required environment variables in a ".env" file.
-
-Example:
-
+### Environment Configuration
+Copy `.env.example` to `.env` and add your own Gemini API key:
+```
 GEMINI_API_KEY=your_api_key_here
+```
+Get a free key from Google AI Studio.
 
-Database Migration
-
+### Database Migration
+```bash
 python manage.py migrate
+```
 
-Run Development Server
-
+### Run Development Server
+```bash
 python manage.py runserver
-
-Open:
-
-http://127.0.0.1:8000/
+```
+Open: http://127.0.0.1:8000/
 
 ---
 
