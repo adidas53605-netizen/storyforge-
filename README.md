@@ -203,9 +203,7 @@ Homepage
 
 [Add Homepage Screenshot]
 
-Dashboard
 
-[Add Dashboard Screenshot]
 
 Story Editor
 
@@ -229,7 +227,7 @@ Live Project
 
 Demo Video
 
-"Watch StoryForge Demo" ("https://youtu.be/N_LeGO6zd0E")
+"Watch StoryForge Demo" (https://youtu.be/N_LeGO6zd0E?si=Sh6UAwpuhMbEbGVt)
 
 ---
 
