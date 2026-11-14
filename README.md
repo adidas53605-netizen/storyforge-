@@ -225,11 +225,11 @@ Consistency Checker
 
 Live Project
 
-[Add Deployed Project URL]
+[https://storyforge-yd1r.onrender.com]
 
 Demo Video
 
-"Watch StoryForge Demo" (ADD_PUBLIC_VIDEO_LINK_HERE)
+"Watch StoryForge Demo" ("https://youtu.be/N_LeGO6zd0E")
 
 ---
 
@@ -246,16 +246,16 @@ Demo Video
 
 ## Team Members
 
-Team Name: [Your Team Name]
+Team Name: Clash Coders
 
-Team Leader: [Leader Name]
+Team Leader: Aditya Das
 
-Team Member| Role
-[Member 1]| [Role]
-[Member 2]| [Role]
-[Member 3]| [Role]
-[Member 4]| [Role]
-[Member 5]| [Role]
+| Team Member | Role |
+| --- | --- |
+| Aditya Das | Team Leader & Backend / AI API Integration |
+| Aditya Naskar | Frontend / UI Design |
+| Sheikh Meheraj Uddin | Story Bible & Prompt Design |
+| Deeptadeep Dey | Testing, Deployment & Demo |
 
 ---
 
