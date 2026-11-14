@@ -199,9 +199,38 @@ http://127.0.0.1:8000/
 
 ## Project Screenshots
 
-Homepage
+### Story Setup
 
-[Add Homepage Screenshot]
+
+![Story Setup](setup.jpeg)
+
+
+
+### Story Bible (Characters & Lore)
+
+
+![Story Bible](story%20bible.jpeg)
+
+
+
+### AI Co-Writer with Branching Choices
+
+
+![Co-Writer](co%20writer.jpeg)
+
+
+
+### Interactive Story Tree
+
+
+![Story Tree](story%20tree.jpeg)
+
+
+
+### Chronicle Reader
+
+
+![Reader](reader.jpeg)
 
 
 
